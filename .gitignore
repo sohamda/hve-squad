@@ -1,0 +1,7 @@
+
+# APM dependencies
+apm_modules/
+
+# Generated/copied orchestration assets (local only)
+.github/
+.agents/

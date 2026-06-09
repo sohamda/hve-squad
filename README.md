@@ -1,0 +1,141 @@
+# hve-squad
+
+APM package that assembles HVE Core agents, prompts, instructions, and skills into one installable bundle for Copilot target environments.
+
+## What this project does
+
+This repository provides a curated APM package that references content from `microsoft/hve-core` under:
+
+- `.github/agents`
+- `.github/instructions`
+- `.github/prompts`
+- `.github/skills`
+
+Instead of manually maintaining hundreds of dependency paths, this project uses an automation script to regenerate the dependency list in `apm.yml`.
+
+## Why this exists
+
+Maintaining explicit APM dependency links by hand is error-prone because HVE Core evolves frequently.
+This package solves that by:
+
+- Auto-discovering all supported markdown artifacts from selected HVE Core folders
+- Updating `dependencies.apm` in `apm.yml`
+- Providing a repeatable author workflow before lock/pack/publish
+
+## Repository structure
+
+- `apm.yml`: package metadata, dependency list, and scripts
+- `apm.lock.yaml`: resolved dependency lock file
+- `scripts/Update-ApmDependencies.ps1`: dependency generator
+- `apm_modules/`: installed dependencies (ignored by git)
+- `.github/`: generated/deployed local assets (ignored by git)
+
+## Prerequisites
+
+- PowerShell 7+
+- Git
+- APM CLI installed and available in `PATH`
+- Access to `microsoft/hve-core` repository
+
+## Scripts
+
+Defined in `apm.yml`:
+
+- `sync-deps`
+  - Regenerates `dependencies.apm` from HVE Core content.
+- `install-sync`
+  - Regenerates `dependencies.apm` and runs `apm install`.
+
+## Maintainer workflow (author of this package)
+
+1. Regenerate dependencies:
+
+   ```powershell
+   apm run sync-deps
+   ```
+
+2. Install dependencies locally:
+
+   ```powershell
+   apm install
+   ```
+
+   Or:
+
+   ```powershell
+   apm run install-sync
+   ```
+
+3. Refresh lockfile:
+
+   ```powershell
+   apm lock
+   ```
+
+4. Build package artifact:
+
+   ```powershell
+   apm pack
+   ```
+
+5. Publish (if applicable):
+
+   ```powershell
+   apm publish
+   ```
+
+Recommended sequence before release:
+
+1. `apm run sync-deps`
+2. `apm lock`
+3. `apm pack`
+
+## Consumer workflow (users of your packed/published package)
+
+Consumers should run:
+
+```powershell
+apm install
+```
+
+They do not need to run `install-sync` unless they are maintaining this package source itself.
+
+## How dependency generation works
+
+The generator script:
+
+- Connects to `microsoft/hve-core` at a target ref (default: `main`)
+- Enumerates files under:
+  - `.github/agents`
+  - `.github/instructions`
+  - `.github/prompts`
+  - `.github/skills`
+- Filters for markdown artifacts
+- Rewrites only `dependencies.apm` in `apm.yml`
+
+This keeps package metadata stable while updating the dependency list safely.
+
+## Customization
+
+You can tune generation behavior in `scripts/Update-ApmDependencies.ps1`:
+
+- `RepoSlug`: source repository
+- `Ref`: branch/tag/commit to scan
+- `IncludeRoots`: folders included in discovery
+- `IncludeRegex`: file filter pattern
+
+## Troubleshooting
+
+- No scripts found:
+  - Check the `scripts` block in `apm.yml` and run `apm list`.
+- Access failures to HVE Core:
+  - Confirm git authentication and repository visibility.
+- Dependencies look stale:
+  - Run `apm run sync-deps`, then `apm lock`.
+- `.github` still appears in git status after ignoring:
+  - Run `git rm -r --cached .github` once, then commit.
+
+## Notes
+
+- `.gitignore` ignores both `apm_modules/` and `.github/` for clean source control.
+- The package remains reproducible through `apm.lock.yaml`.

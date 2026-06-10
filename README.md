@@ -28,7 +28,7 @@ This package solves that by:
 - `apm.lock.yaml`: resolved dependency lock file
 - `scripts/Update-ApmDependencies.ps1`: dependency generator
 - `apm_modules/`: installed dependencies (ignored by git)
-- `.github/`: generated/deployed local assets (ignored by git)
+- `.github/`: generated/deployed local assets (ignored by git, except `.github/workflows/` if tracked)
 
 ## Prerequisites
 
@@ -72,13 +72,13 @@ Defined in `apm.yml`:
    apm lock
    ```
 
-4. Build package artifact:
+4. [OPTIONAL] Build package artifact (only needed to build a plugin):
 
    ```powershell
    apm pack
    ```
 
-5. Publish (if applicable):
+5. [OPTIONAL] Publish (if applicable):
 
    ```powershell
    apm publish
@@ -88,14 +88,16 @@ Recommended sequence before release:
 
 1. `apm run sync-deps`
 2. `apm lock`
-3. `apm pack`
+3. `apm pack` (optional)
 
-## Consumer workflow (users of your packed/published package)
+## Consumer workflow (GitHub installs for your package)
 
 Consumers should run:
 
 ```powershell
-apm install
+apm install "Peter-N91/hve-squad#v0.1.0"  # pinned (recommended); update the version tag to the one you need
+# or
+apm install Peter-N91/hve-squad          # latest on default branch
 ```
 
 They do not need to run `install-sync` unless they are maintaining this package source itself.
@@ -133,9 +135,15 @@ You can tune generation behavior in `scripts/Update-ApmDependencies.ps1`:
 - Dependencies look stale:
   - Run `apm run sync-deps`, then `apm lock`.
 - `.github` still appears in git status after ignoring:
-  - Run `git rm -r --cached .github` once, then commit.
+  - Run `git rm -r --cached .github` once, then `git add .github/workflows` (if you track workflows here), then commit.
+
+## Versioning
+
+- Releases follow [Semantic Versioning](https://semver.org/).
+- See [CHANGELOG.md](CHANGELOG.md) for what is included in each version.
+- Consumers can pin to a tagged version, for example `apm install "Peter-N91/hve-squad#v0.1.0"`.
 
 ## Notes
 
-- `.gitignore` ignores both `apm_modules/` and `.github/` for clean source control.
+- `.gitignore` ignores `apm_modules/`, generated `.github` assets, and keeps `.github/workflows/` tracked.
 - The package remains reproducible through `apm.lock.yaml`.

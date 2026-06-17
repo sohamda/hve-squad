@@ -129,7 +129,7 @@ jobs:
       # ── Open a PR with the changes ────────────────────────────────────────
       - name: Create Pull Request
         if: steps.needs_sync.outputs.skip != 'true'
-        uses: peter-evans/create-pull-request@5e914681574605d53f1b55f4a40e04f7a6f2b62d # v7.0.6
+        uses: peter-evans/create-pull-request@v7
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           commit-message: "chore(deps): sync hve-core mirror to ${{ steps.latest.outputs.short_sha }}"

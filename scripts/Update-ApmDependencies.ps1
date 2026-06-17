@@ -492,7 +492,9 @@ if ($MyInvocation.InvocationName -ne '.') {
         $resolvedCommit = $tree.ResolvedCommit
         Write-Host "Local mirror pinned to commit $resolvedCommit." -ForegroundColor Green
 
-        $deps = Build-DependencyList -Paths $paths -Repository $RepoSlug -Roots $IncludeRoots -PathFilterRegex $IncludeRegex -Ref $resolvedCommit
+        $hveCoreMirrorPrefix = "$SquadRepoSlug/$HveCoreLocalRoot"
+        Write-Host "Emitting hve-core refs as '$hveCoreMirrorPrefix/...'." -ForegroundColor Cyan
+        $deps = Build-DependencyList -Paths $paths -Repository $hveCoreMirrorPrefix -Roots $IncludeRoots -PathFilterRegex $IncludeRegex -Ref $resolvedCommit
         if ($null -eq $deps) {
             $deps = @()
         }

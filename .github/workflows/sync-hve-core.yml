@@ -118,12 +118,13 @@ jobs:
         run: |
           # Replace any remaining microsoft/hve-core/<path>#<hash> → local mirror path
           # (idempotent: already-local refs are left unchanged)
+          REPO="${{ github.repository }}"
           sed -i \
-            's|microsoft/hve-core/\(.*\)#[a-f0-9]*|Peter-N91/hve-squad/hve-core/\1|g' \
+            "s|microsoft/hve-core/\(.*\)#[a-f0-9]*|${REPO}/hve-core/\1|g" \
             apm.yml
           # Strip stale #<hash> suffixes from already-local refs (in case they got pinned)
           sed -i \
-            's|\(Peter-N91/hve-squad/hve-core/[^#]*\)#[a-f0-9]*|\1|g' \
+            "s|\(${REPO}/hve-core/[^#]*\)#[a-f0-9]*|\1|g" \
             apm.yml
 
       # ── Open a PR with the changes ────────────────────────────────────────

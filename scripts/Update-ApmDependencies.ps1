@@ -50,7 +50,7 @@
 .EXAMPLE
     ./scripts/Update-ApmDependencies.ps1 -Ref main -SquadRef v0.7.0
 .EXAMPLE
-    ./scripts/Update-ApmDependencies.ps1 -SquadSourceRoot squad-src -SquadRepoSlug Peter-N91/hve-squad
+    ./scripts/Update-ApmDependencies.ps1 -SquadSourceRoot squad-src -SquadRepoSlug myorg/hve-squad
 .NOTES
     Intended for use with: apm run sync-deps
 #>
@@ -84,11 +84,14 @@ param(
 
     [Parameter(Mandatory = $false)]
     [ValidateNotNullOrEmpty()]
-    [string]$SquadSourceRoot = 'squad-src',
+    [string]$HveCoreLocalRoot = 'hve-core',
 
     [Parameter(Mandatory = $false)]
     [ValidateNotNullOrEmpty()]
-    [string]$SquadRepoSlug = 'Peter-N91/hve-squad',
+    [string]$SquadSourceRoot = 'squad-src',
+
+    [Parameter(Mandatory = $false)]
+    [string]$SquadRepoSlug,
 
     [Parameter(Mandatory = $false)]
     [string]$SquadRef,
@@ -98,6 +101,23 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+
+# Auto-detect SquadRepoSlug from the git remote when not explicitly provided.
+# Parses 'git remote get-url origin' and converts the URL to owner/repo format.
+if ([string]::IsNullOrWhiteSpace($SquadRepoSlug)) {
+    $remoteUrl = & git remote get-url origin 2>$null
+    if ($LASTEXITCODE -eq 0 -and -not [string]::IsNullOrWhiteSpace($remoteUrl)) {
+        $remoteUrl = $remoteUrl.Trim()
+        # Handle both HTTPS (https://github.com/owner/repo.git) and SSH (git@github.com:owner/repo.git)
+        if ($remoteUrl -match 'github\.com[:/]([^/]+/[^/]+?)(\.git)?$') {
+            $SquadRepoSlug = $matches[1]
+        }
+    }
+    if ([string]::IsNullOrWhiteSpace($SquadRepoSlug)) {
+        throw "Could not detect SquadRepoSlug from git remote. Pass -SquadRepoSlug owner/repo explicitly."
+    }
+    Write-Host "Auto-detected SquadRepoSlug: $SquadRepoSlug" -ForegroundColor Cyan
+}
 
 #region Functions
 function Get-LeadingSpaceCount {
@@ -414,16 +434,63 @@ function Update-ApmDependencyList {
     $lines.InsertRange($apmIndex + 1, $insertion)
     Set-Content -LiteralPath $Path -Value $lines -Encoding utf8
 }
+
+function Get-LocalRepoTreePaths {
+    [CmdletBinding()]
+    [OutputType([pscustomobject])]
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$LocalRoot,
+
+        [Parameter(Mandatory = $true)]
+        [string[]]$Roots
+    )
+
+    if (-not (Test-Path -LiteralPath $LocalRoot)) {
+        throw "Local hve-core mirror not found at '$LocalRoot'. Run scripts/Sync-HveCore.ps1 first."
+    }
+
+    $resolvedRoot = (Resolve-Path -LiteralPath $LocalRoot).ProviderPath
+    $versionFile = Join-Path $resolvedRoot '.version'
+
+    if (-not (Test-Path -LiteralPath $versionFile)) {
+        throw "Version file not found at '$versionFile'. The mirror may be incomplete. Run scripts/Sync-HveCore.ps1 first."
+    }
+
+    $resolvedCommit = (Get-Content -LiteralPath $versionFile -Raw).Trim()
+    if ([string]::IsNullOrWhiteSpace($resolvedCommit)) {
+        throw "Version file '$versionFile' is empty. Run scripts/Sync-HveCore.ps1 first."
+    }
+
+    $result = [System.Collections.Generic.List[string]]::new()
+    foreach ($root in $Roots) {
+        $searchDir = Join-Path $resolvedRoot $root
+        if (-not (Test-Path -LiteralPath $searchDir)) {
+            continue
+        }
+
+        $files = Get-ChildItem -LiteralPath $searchDir -Recurse -File
+        foreach ($file in $files) {
+            $relative = [System.IO.Path]::GetRelativePath($resolvedRoot, $file.FullName).Replace('\', '/')
+            $result.Add($relative)
+        }
+    }
+
+    return [pscustomobject]@{
+        ResolvedCommit = $resolvedCommit
+        Paths          = @($result)
+    }
+}
 #endregion Functions
 
 #region Main Execution
 if ($MyInvocation.InvocationName -ne '.') {
     try {
-        Write-Host "Reading repository tree from $RepoSlug@$Ref..." -ForegroundColor Cyan
-        $tree = Get-RepoTreePaths -Repository $RepoSlug -GitRef $Ref -Roots $IncludeRoots
+        Write-Host "Reading hve-core tree from local mirror '$HveCoreLocalRoot'..." -ForegroundColor Cyan
+        $tree = Get-LocalRepoTreePaths -LocalRoot $HveCoreLocalRoot -Roots $IncludeRoots
         $paths = $tree.Paths
         $resolvedCommit = $tree.ResolvedCommit
-        Write-Host "Resolved $RepoSlug@$Ref to $resolvedCommit; pinning hve-core dependencies to that commit." -ForegroundColor Green
+        Write-Host "Local mirror pinned to commit $resolvedCommit." -ForegroundColor Green
 
         $deps = Build-DependencyList -Paths $paths -Repository $RepoSlug -Roots $IncludeRoots -PathFilterRegex $IncludeRegex -Ref $resolvedCommit
         if ($null -eq $deps) {

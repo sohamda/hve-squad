@@ -46,6 +46,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      actions: write
     steps:
       - name: Checkout
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -141,4 +142,16 @@ jobs:
           else
             echo "::notice::No changes after regeneration — nothing to commit."
           fi
+
+      # ── Dispatch release workflow ───────────────────────────────────────────
+      # GITHUB_TOKEN-authored pushes do not trigger other workflows, so we
+      # dispatch release.yml explicitly. It will read the new version from
+      # apm.yml and cut the tag + GitHub Release.
+      - name: Trigger release
+        if: steps.check.outputs.skip != 'true' && inputs.dry_run != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh workflow run release.yml --ref main
+          echo "::notice::Triggered release.yml for v${{ steps.bump.outputs.version }}"
 

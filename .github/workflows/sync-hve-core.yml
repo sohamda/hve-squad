@@ -11,7 +11,10 @@ name: Sync and Adapt
 #        - rewrites all microsoft/hve-core entries with the new SHA
 #        - auto-detects the GitHub owner for squad entries
 #        - updates apm.lock.yaml
-#   5. Commits and pushes directly to main.
+#   5. Bumps the patch version in apm.yml.
+#   6. Prepends a CHANGELOG entry for the new version.
+#   7. Commits apm.yml, apm.lock.yaml, and CHANGELOG.md.
+#   8. Dispatches release.yml to create the tag and GitHub Release.
 #
 # No local hve-core mirror involved — all content is referenced directly
 # from microsoft/hve-core at a pinned commit SHA.
@@ -97,6 +100,31 @@ jobs:
           [[ "${{ inputs.dry_run }}" == "true" ]] && ARGS+=(-DryRun)
           pwsh scripts/Update-ApmDependencies.ps1 "${ARGS[@]}"
 
+      # ── Bump patch version in apm.yml ─────────────────────────────────────
+      - name: Bump patch version
+        if: steps.check.outputs.skip != 'true' && inputs.dry_run != 'true'
+        id: bump
+        run: |
+          CURRENT=$(grep '^version:' apm.yml | sed 's/version:[[:space:]]*//')
+          IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT"
+          NEW_VER="$MAJOR.$MINOR.$((PATCH + 1))"
+          sed -i "s/^version: .*/version: $NEW_VER/" apm.yml
+          echo "version=$NEW_VER" >> "$GITHUB_OUTPUT"
+          echo "Bumped $CURRENT → $NEW_VER"
+
+      # ── Prepend CHANGELOG entry ────────────────────────────────────────────
+      - name: Update CHANGELOG
+        if: steps.check.outputs.skip != 'true' && inputs.dry_run != 'true'
+        run: |
+          NEW_VERSION="${{ steps.bump.outputs.version }}"
+          TODAY=$(date -u +%Y-%m-%d)
+          SHORT_SHA="${{ steps.latest.outputs.short_sha }}"
+          FULL_SHA="${{ steps.latest.outputs.sha }}"
+          NEW_ENTRY="## [$NEW_VERSION] - $TODAY\n\n### Changed\n\n- Updated hve-core dependency pin to \`$SHORT_SHA\` ($FULL_SHA).\n"
+          awk -v entry="$NEW_ENTRY" 'BEGIN{done=0} /^## \[/{if(!done){printf "%s\n", entry; done=1}} 1' \
+            CHANGELOG.md > CHANGELOG.tmp
+          mv CHANGELOG.tmp CHANGELOG.md
+
       # ── Commit and push ───────────────────────────────────────────────────
       - name: Commit and push
         if: inputs.dry_run != 'true'
@@ -107,11 +135,22 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git remote set-url origin \
             "https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git"
-          git add apm.yml apm.lock.yaml
+          git add apm.yml apm.lock.yaml CHANGELOG.md
           if ! git diff --cached --quiet; then
-            git commit -m "chore(deps): update hve-core pin to ${{ steps.latest.outputs.short_sha }}"
+            git commit -m "chore(release): bump to ${{ steps.bump.outputs.version }} with hve-core@${{ steps.latest.outputs.short_sha }}"
             git push origin main
-            echo "::notice::Pushed hve-core update to ${{ steps.latest.outputs.short_sha }}"
+            echo "::notice::Pushed release bump to v${{ steps.bump.outputs.version }} (hve-core@${{ steps.latest.outputs.short_sha }})"
           else
             echo "::notice::No changes after regeneration — nothing to commit."
           fi
+
+      # ── Dispatch release workflow to create tag + GitHub Release ──────────
+      - name: Trigger release
+        if: steps.check.outputs.skip != 'true' && inputs.dry_run != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh workflow run release.yml \
+            -f version="${{ steps.bump.outputs.version }}" \
+            -f hve_core_ref="${{ steps.latest.outputs.sha }}"
+          echo "::notice::Triggered release.yml for v${{ steps.bump.outputs.version }}"

@@ -5,32 +5,14 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.8.4] - 2026-06-18
-
-### Changed
-
-- Updated hve-core dependency pin to `7632791` (7632791ff81f917775157cf179c486052d9f00cc).
-
-## [0.8.3] - 2026-06-18
-
-### Changed
-
-- Updated hve-core dependency pin to `7632791` (7632791ff81f917775157cf179c486052d9f00cc).
-
-## [0.8.3] - 2026-06-18
-
-### Changed
-
-- Updated hve-core dependency pin to `7632791` (7632791ff81f917775157cf179c486052d9f00cc).
-
 ## [0.8.2] - 2026-06-18
 
 Fork-specific release. No functional changes to squad content relative to upstream `Peter-N91/hve-squad@v0.8.1`.
 
 ### Changed
 
-- Automated sync workflow (`sync-hve-core.yml`) rewritten: drops the local `hve-core/` mirror entirely; all `microsoft/hve-core` content is now referenced directly from `microsoft/hve-core` at a pinned commit SHA. On each run the workflow fetches the latest `microsoft/hve-core` commit, regenerates `apm.yml` deps, bumps the patch version, updates this changelog, and dispatches a release.
-- Both `sync-hve-core.yml` and `release.yml` pass `-SquadRepoSlug` explicitly so any fork regenerates paths against its own owner automatically.
+- Automated sync workflow (`sync-hve-core.yml`) all `microsoft/hve-core` content is now referenced directly from `microsoft/hve-core` at a pinned commit SHA. On each run the workflow fetches the latest `microsoft/hve-core` commit, regenerates `apm.yml` deps, bumps the patch version, updates this changelog, commits, and dispatches `release.yml`.
+- Sync and release responsibilities split: `sync-hve-core.yml` owns the apm.yml bump and commit; `release.yml` only tags the version currently on `main` and publishes the GitHub Release (with an optional `version` input for manual bumps). Squad self-references stay pinned to upstream `Peter-N91/hve-squad` (the script default) so a fork's automation never rewrites them to its own slug.
 
 ### Consumer install
 

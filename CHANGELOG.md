@@ -11,6 +11,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Updated hve-core dependency pin to `7632791` (7632791ff81f917775157cf179c486052d9f00cc).
 
+## [0.8.3] - 2026-06-18
+
+### Changed
+
+- Updated hve-core dependency pin to `7632791` (7632791ff81f917775157cf179c486052d9f00cc).
+
 ## [0.8.2] - 2026-06-18
 
 Fork-specific release. No functional changes to squad content relative to upstream `Peter-N91/hve-squad@v0.8.1`.

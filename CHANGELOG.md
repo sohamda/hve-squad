@@ -11,6 +11,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Updated hve-core dependency pin to `b98f527` (b98f527e7b3565c1a9f1d50eba899b1588c41bcc).
 
+### Consumer install
+
+Pin to this version:
+
+```powershell
+apm install "Peter-N91/hve-squad#v0.8.3"
+```
+
+[0.8.3]: https://github.com/Peter-N91/hve-squad/releases/tag/v0.8.3
+
+
 ## [0.8.2] - 2026-06-18
 
 Fork-specific release. No functional changes to squad content relative to upstream `Peter-N91/hve-squad@v0.8.1`.
@@ -24,6 +35,7 @@ Fork-specific release. No functional changes to squad content relative to upstre
 
 ```powershell
 apm install "Peter-N91/hve-squad#v0.8.2"
+
 ```
 
 [0.8.2]: https://github.com/Peter-N91/hve-squad/releases/tag/v0.8.2

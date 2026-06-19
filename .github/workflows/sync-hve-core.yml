@@ -118,9 +118,33 @@ jobs:
           TODAY=$(date -u +%Y-%m-%d)
           SHORT_SHA="${{ steps.latest.outputs.short_sha }}"
           FULL_SHA="${{ steps.latest.outputs.sha }}"
-          NEW_ENTRY="## [$NEW_VERSION] - $TODAY\n\n### Changed\n\n- Updated hve-core dependency pin to \`$SHORT_SHA\` ($FULL_SHA).\n"
-          awk -v entry="$NEW_ENTRY" 'BEGIN{done=0} /^## \[/{if(!done){printf "%s\n", entry; done=1}} 1' \
-            CHANGELOG.md > CHANGELOG.tmp
+          REPO="${{ github.repository }}"
+          cat > /tmp/changelog_entry.md <<EOF
+          ## [$NEW_VERSION] - $TODAY
+
+          ### Changed
+
+          - Updated hve-core dependency pin to \`$SHORT_SHA\` ($FULL_SHA).
+
+          ### Consumer install
+
+          Pin to this version:
+
+          \`\`\`powershell
+          apm install "$REPO#v$NEW_VERSION"
+          \`\`\`
+
+          [$NEW_VERSION]: https://github.com/$REPO/releases/tag/v$NEW_VERSION
+
+          EOF
+          awk 'BEGIN{done=0}
+               /^## \[/ {
+                 if (!done) {
+                   while ((getline line < "/tmp/changelog_entry.md") > 0) print line;
+                   done=1
+                 }
+               }
+               { print }' CHANGELOG.md > CHANGELOG.tmp
           mv CHANGELOG.tmp CHANGELOG.md
 
       # ── Commit and push ───────────────────────────────────────────────────

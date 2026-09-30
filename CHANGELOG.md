@@ -5,6 +5,22 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.82] - 2026-09-30
+
+### Changed
+
+- Updated hve-core dependency pin to `5c7f9a7` (5c7f9a7d2c0da3d8bbd3562cb89b7a7811acd2eb).
+
+### Consumer install
+
+Pin to this version:
+
+```powershell
+apm install "sohamda/hve-squad#v0.8.82"
+```
+
+[0.8.82]: https://github.com/sohamda/hve-squad/releases/tag/v0.8.82
+
 ## [0.8.81] - 2026-09-29
 
 ### Changed
